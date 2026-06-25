@@ -28,3 +28,6 @@ import fs from 'fs';
             throw error;
         }
     };
+
+
+    export { uploadToCloudinary };
