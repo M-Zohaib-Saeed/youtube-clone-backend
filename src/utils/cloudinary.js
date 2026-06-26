@@ -19,8 +19,8 @@ import fs from 'fs';
                 resource_type: "auto", // Automatically detect the file type (image, video, etc.)
             });
             //upload successful
-            console.log('Upload successful:', respone.url);
-
+            //console.log('Upload successful:', respone.url);
+              fs.unlinkSync(filePath); // Delete the file from local storage after successful upload
             return respone;
         } catch (error) {
             fs.unlinkSync(filePath); // Delete the file from local storage if upload fails

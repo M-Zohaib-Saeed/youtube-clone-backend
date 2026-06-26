@@ -7,7 +7,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 const registerUser = asynchandler(async (req, res) => {
     // Your logic for registering a user goes here
-    res.status(201).json({ message: "User registered successfully" });
+    //res.status(201).json({ message: "User registered successfully" });
     
      // Register User Algorithm
      // 1. Get user data from req.body
@@ -20,10 +20,10 @@ const registerUser = asynchandler(async (req, res) => {
      // 8. Return success response
 
      const { username, email, fullName, password } = req.body;
-     console.log("User data:", { username, email, fullName, password });
+     //console.log("User data:", { username, email, fullName, password });
 
 
-     if([username, email, fullName, password].some(field => field.trim() === "")) {
+     if([username, email, fullName, password].some(field => field === undefined || field === null || field.trim() === "")) {
         throw new ApiError(400, "All fields are required");
      }
 
@@ -34,7 +34,7 @@ const registerUser = asynchandler(async (req, res) => {
          }
      
       const avatarLocalPath = req.files?.avatar[0]?.path;
-      const coverImageLocalPath = req.files?.coverimage[0]?.path;
+      const coverImageLocalPath = req.files?.coverimage?.[0]?.path || "";
 
       if(!avatarLocalPath) {
         throw new ApiError(400, "Avatar image is required");
@@ -45,11 +45,13 @@ const registerUser = asynchandler(async (req, res) => {
       const avatarUploadResponse = await uploadToCloudinary(avatarLocalPath);
       const coverImageUploadResponse = coverImageLocalPath ? await uploadToCloudinary(coverImageLocalPath) : null;
 
+      //console.log("Avatar URL:", avatarUploadResponse.secure_url);
+
       if(!avatarUploadResponse ) {
         throw new ApiError(500, "Error uploading avatar to Cloudinary");
       }
 
-      const User =  await User.create({
+      const user =  await User.create({
         username,
         email,
         fullName,
@@ -59,7 +61,7 @@ const registerUser = asynchandler(async (req, res) => {
       });
 
 
-     const createdUser = await User.findById(User._id).select("-password -refreshToken");
+     const createdUser = await User.findById(user._id).select("-password -refreshToken");
 
 
      if(!createdUser) {
