@@ -4,6 +4,21 @@ import {User} from "../models/user.model.js";
 import {uploadToCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+const generateAccessAndRefreshTokens = async (userId) => {
+    try {
+        const user = await User.findById(userId);   // this line may cause an error
+        const accessToken = await user.generateAccessToken();
+        const refreshToken = await user.generateRefreshToken();
+
+        user.refreshToken = refreshToken;
+        await user.save({ validateBeforeSave: false });
+
+        return { accessToken, refreshToken };
+    } catch (error) {
+        //console.log(error);
+        throw new ApiError(500, "Error generating tokens");
+    }
+};
 
 const registerUser = asynchandler(async (req, res) => {
     // Your logic for registering a user goes here
@@ -33,7 +48,7 @@ const registerUser = asynchandler(async (req, res) => {
          throw new ApiError(409, "User with email or username already exists");
          }
      
-      const avatarLocalPath = req.files?.avatar[0]?.path;
+      const avatarLocalPath = req.files?.avatar?.[0]?.path;
       const coverImageLocalPath = req.files?.coverimage?.[0]?.path || "";
 
       if(!avatarLocalPath) {
@@ -52,9 +67,9 @@ const registerUser = asynchandler(async (req, res) => {
       }
 
       const user =  await User.create({
-        username,
+        username, 
         email,
-        fullName,
+        fullName, 
         password,
         avatar: avatarUploadResponse.url,
         coverimage: coverImageUploadResponse?.url || null,
@@ -76,4 +91,87 @@ const registerUser = asynchandler(async (req, res) => {
 }); 
 
 
-export { registerUser }; 
+const loginUser = asynchandler(async (req, res) => {
+
+      // Login User Algorithm
+
+      // 1. Get email/username and password from req.body
+      // 2. Validate required fields
+      // 3. Find user in database
+      // 4. If user not found, throw error
+      // 5. Compare entered password with hashed password
+      // 6. If password is incorrect, throw error
+      // 7. Generate access token
+      // 8. Generate refresh token
+      // 9. Save refresh token in database
+      // 10. Send tokens in cookies (or response)
+      // 11. Return logged-in user data (without password)
+
+      const { email , username , password } = req.body;
+
+      if(  !email && !username) {
+        throw new ApiError(400, "Email or Username  is required");
+      }
+
+      const user = await User.findOne({ $or: [{ email }, { username }] });
+
+        if(!user) {
+            throw new ApiError(404, "User not found");
+        }
+      
+        const isPasswordCorrect = await user.isPasswordCorrect(password);
+
+        if(!isPasswordCorrect) {
+            throw new ApiError(401, "Invalid password");
+        }
+
+         const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+         
+         const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+         if(!loggedInUser) {
+            throw new ApiError(500, "Something went wrong while logging in the user");
+         }
+
+         const options = {
+            httpOnly: true,
+            secure: true, // Set to true if using HTTPs
+         }
+
+         return res.status(200)
+         .cookie("refreshToken", refreshToken, options)
+         .cookie("accessToken", accessToken, options)
+         .json(
+            new ApiResponse(200,
+                "User logged in successfully",
+               { user: loggedInUser, accessToken, refreshToken })
+         );
+
+ 
+
+});
+
+const logoutUser = asynchandler(async (req, res) => {
+    User.findByIdAndUpdate(req.user._id, 
+        {$set : { refreshToken: undefined } }
+        , { new: true })
+    
+    const options = {
+        httpOnly: true,
+        secure: true, // Set to true if using HTTPs
+    }
+    
+    return res.status(200).
+    clearCookie("refreshToken", options)
+    .clearCookie("accessToken", options).
+    json(
+        new ApiResponse(200, "User logged out successfully", null)
+    );
+
+});
+
+export {
+     registerUser,
+     loginUser,
+     logoutUser
+ }; 
