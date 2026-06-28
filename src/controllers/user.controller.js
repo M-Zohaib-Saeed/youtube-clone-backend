@@ -216,9 +216,172 @@ const refreshAccessToken = asynchandler(async(req, res) => {
 
 });
 
+const changePassword = asynchandler(async (req, res) => {
+// Change Password Algorithm
+
+// 1. Get oldPassword and newPassword from req.body
+// 2. Check if both fields are provided
+// 3. Get logged-in user from req.user
+// 4. Verify oldPassword using bcrypt/user method
+// 5. If old password is incorrect, throw error
+// 6. Set user.password = newPassword
+// 7. Save user (pre-save middleware will hash password)
+// 8. Return success response
+
+const {oldPassword, newPassword} = req.body;
+
+if(!oldPassword || !newPassword){
+    throw new ApiError(400, "Both oldPassword and newPassword are required")
+}
+
+if (oldPassword === newPassword) {
+    throw new ApiError(
+        400,
+        "New password must be different from old password"
+    );
+}
+
+const user = await User.findById(req.user?._id);
+
+if (!user) {
+    throw new ApiError(404, "User not found");
+}
+
+const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+if(!isPasswordCorrect){
+    throw new ApiError(400, "Your old password is incorrect")
+}
+
+user.password = newPassword;
+
+await user.save();
+
+return res.status(200)
+.json(
+    new ApiResponse(
+        200,
+        "Password changed Successfully",
+        {passwordChanged: true}
+    )
+);
+
+});
+
+const getCurrentUser = asynchandler(async (req, res) => {
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            "Current user fetched successfully",
+            req.user
+        )
+    );
+});
+
+const updateAccountDetails = asynchandler(async (req, res) => {
+
+    const { fullName, email } = req.body;
+
+    if (!fullName || !email) {
+        throw new ApiError(400, "Full name and email are required");
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                fullName,
+                email
+            }
+        },
+        {
+            new: true
+        }
+    ).select("-password -refreshToken");
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            "Account details updated successfully",
+            user
+        )
+    );
+});
+
+const updateUserAvatar = asynchandler(async (req, res) => {
+    const avatarLocalPath = req.file?.path
+
+    if(!avatarLocalPath){
+        throw new ApiError(400, "Avatar file is missing")
+    }
+
+    const avatar = await uploadToCloudinary(avatarLocalPath);
+
+    if(!avatar.url){
+        throw new ApiError(500, "error while uploading avatar on cloudinary")
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id,
+        {
+            $set: {avatar: avatar.url }
+        },
+        {new : true}
+    ).select("-password -refreshToken")
+
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            "Avatar image is changed successfuuly",
+            user
+        )
+    )
+}); 
+
+
+
+const updateUserCoverImage = asynchandler(async (req, res) => {
+    const coverImageLocalPath = req.file?.path
+
+    if(!coverImageLocalPath){
+        throw new ApiError(400, "Cover Image file is missing")
+    }
+
+    const coverImage = await uploadToCloudinary(coverImageLocalPath);
+
+    if(!coverImage.url){
+        throw new ApiError(500, "error while uploading cover image on cloudinary")
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id,
+        {
+            $set: {coverimage: coverImage.url }
+        },
+        {new : true}
+    ).select("-password -refreshToken")
+
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            "Cover image is changed successfuuly",
+            user
+        )
+    )
+}); 
+
 export {
      registerUser,
      loginUser,
      logoutUser,
-     refreshAccessToken
+     refreshAccessToken,
+     changePassword,
+     getCurrentUser,
+     updateAccountDetails,
+     updateUserAvatar,
+     updateUserCoverImage
  }; 
