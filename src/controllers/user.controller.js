@@ -315,6 +315,10 @@ const updateAccountDetails = asynchandler(async (req, res) => {
 const updateUserAvatar = asynchandler(async (req, res) => {
     const avatarLocalPath = req.file?.path
 
+    const currentUser = await User.findById(req.user._id);
+
+    const oldAvatarImageUrl = currentUser?.avatar;
+
     if(!avatarLocalPath){
         throw new ApiError(400, "Avatar file is missing")
     }
@@ -332,7 +336,9 @@ const updateUserAvatar = asynchandler(async (req, res) => {
         {new : true}
     ).select("-password -refreshToken")
 
-    await deleteFromCloudinaryByUrl(avatar.url);  // deleting older pic after updating from cloudinary
+    if (oldAvatarImageUrl) {
+    await deleteFromCloudinaryByUrl(oldAvatarImageUrl);
+      }  // deleting older pic after updating from cloudinary
 
     return res.status(200)
     .json(
@@ -346,6 +352,10 @@ const updateUserAvatar = asynchandler(async (req, res) => {
 
 const updateUserCoverImage = asynchandler(async (req, res) => {
     const coverImageLocalPath = req.file?.path
+    
+    const currentUser = await User.findById(req.user._id);
+
+    const oldCoverImageUrl = currentUser?.coverimage;
 
     if(!coverImageLocalPath){
         throw new ApiError(400, "Cover Image file is missing")
@@ -364,7 +374,9 @@ const updateUserCoverImage = asynchandler(async (req, res) => {
         {new : true}
     ).select("-password -refreshToken")
 
-     await deleteFromCloudinaryByUrl(coverImage.url);  // deleting older pic after updating from cloudinary
+    if (oldCoverImageUrl) {
+    await deleteFromCloudinaryByUrl(oldCoverImageUrl);
+    }  // deleting older pic after updating from cloudinary
 
     return res.status(200)
     .json(
