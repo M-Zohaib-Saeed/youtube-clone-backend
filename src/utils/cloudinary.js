@@ -30,4 +30,26 @@ import fs from 'fs';
     };
 
 
-    export { uploadToCloudinary };
+
+const deleteFromCloudinaryByUrl = async (url) => {
+    try {
+        if (!url) return null;
+
+        const publicId = url
+            .split("/")
+            .pop()
+            .split(".")[0];
+
+        const result = await cloudinary.uploader.destroy(publicId);
+
+        return result;
+    } catch (error) {
+        console.error("Error deleting image from cloudinary:", error);
+        return null;
+    }
+};
+
+
+
+
+    export { uploadToCloudinary, deleteFromCloudinaryByUrl };

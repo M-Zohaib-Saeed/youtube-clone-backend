@@ -1,7 +1,7 @@
 import {asynchandler} from "../utils/asynchandler.js";
 import {ApiError} from "../utils/ApiError.js";
 import {User} from "../models/user.model.js";
-import {uploadToCloudinary} from "../utils/cloudinary.js";
+import {uploadToCloudinary, deleteFromCloudinaryByUrl} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -332,6 +332,8 @@ const updateUserAvatar = asynchandler(async (req, res) => {
         {new : true}
     ).select("-password -refreshToken")
 
+    await deleteFromCloudinaryByUrl(avatar.url);  // deleting older pic after updating from cloudinary
+
     return res.status(200)
     .json(
         new ApiResponse(
@@ -341,8 +343,6 @@ const updateUserAvatar = asynchandler(async (req, res) => {
         )
     )
 }); 
-
-
 
 const updateUserCoverImage = asynchandler(async (req, res) => {
     const coverImageLocalPath = req.file?.path
@@ -364,6 +364,8 @@ const updateUserCoverImage = asynchandler(async (req, res) => {
         {new : true}
     ).select("-password -refreshToken")
 
+     await deleteFromCloudinaryByUrl(coverImage.url);  // deleting older pic after updating from cloudinary
+
     return res.status(200)
     .json(
         new ApiResponse(
@@ -374,10 +376,13 @@ const updateUserCoverImage = asynchandler(async (req, res) => {
     )
 }); 
 
+
+
+
 export {
      registerUser,
      loginUser,
-     logoutUser,
+     logoutUser, 
      refreshAccessToken,
      changePassword,
      getCurrentUser,
@@ -385,3 +390,4 @@ export {
      updateUserAvatar,
      updateUserCoverImage
  }; 
+
